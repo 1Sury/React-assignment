@@ -4,6 +4,15 @@ const RichTextEditor = ({ userData, onSave }) => {
   const [content, setContent] = useState("");
   const [editHistory, setEditHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [activeStyles, setActiveStyles] = useState({
+    bold: false,
+    italic: false,
+    underline: false,
+    unorderedList: false,
+    alignLeft: false,
+    alignCenter: false,
+    alignRight: false,
+  });
   const editorRef = useRef(null);
   const [selection, setSelection] = useState(null);
 
@@ -23,6 +32,24 @@ const RichTextEditor = ({ userData, onSave }) => {
       sel.removeAllRanges();
       sel.addRange(range);
     }
+  }, []);
+
+  useEffect(() => {
+    const checkActiveStyles = () => {
+      setActiveStyles({
+        bold: document.queryCommandState("bold"),
+        italic: document.queryCommandState("italic"),
+        underline: document.queryCommandState("underline"),
+        unorderedList: document.queryCommandState("insertUnorderedList"),
+        alignLeft: document.queryCommandState("justifyLeft"),
+        alignCenter: document.queryCommandState("justifyCenter"),
+        alignRight: document.queryCommandState("justifyRight"),
+      });
+    };
+
+    document.addEventListener("selectionchange", checkActiveStyles);
+    return () =>
+      document.removeEventListener("selectionchange", checkActiveStyles);
   }, []);
 
   useEffect(() => {
@@ -78,6 +105,12 @@ const RichTextEditor = ({ userData, onSave }) => {
     const updatedContent = editorRef.current.innerHTML;
     setContent(updatedContent);
     addToHistory(updatedContent);
+
+    // Update active styles after command execution
+    setActiveStyles((prev) => ({
+      ...prev,
+      [command]: document.queryCommandState(command),
+    }));
 
     editorRef.current.focus();
   };
@@ -178,6 +211,12 @@ const RichTextEditor = ({ userData, onSave }) => {
     fontWeight: "bold",
   };
 
+  const activeButtonStyle = {
+    ...buttonStyle,
+    background: "#4a90e2",
+    borderColor: "#357abd",
+  };
+
   const containerStyle = {
     backgroundColor: "#1a1a1a",
     padding: "16px",
@@ -216,28 +255,34 @@ const RichTextEditor = ({ userData, onSave }) => {
       <div style={toolbarStyle}>
         <div style={groupStyle}>
           <button
-            style={buttonStyle}
+            style={activeStyles.bold ? activeButtonStyle : buttonStyle}
             onClick={() => handleCommand("bold")}
             title="Bold"
           >
             B
           </button>
           <button
-            style={{ ...buttonStyle, fontStyle: "italic" }}
+            style={{
+              ...(activeStyles.italic ? activeButtonStyle : buttonStyle),
+              fontStyle: "italic",
+            }}
             onClick={() => handleCommand("italic")}
             title="Italic"
           >
             I
           </button>
           <button
-            style={{ ...buttonStyle, textDecoration: "underline" }}
+            style={{
+              ...(activeStyles.underline ? activeButtonStyle : buttonStyle),
+              textDecoration: "underline",
+            }}
             onClick={() => handleCommand("underline")}
             title="Underline"
           >
             U
           </button>
           <button
-            style={buttonStyle}
+            style={activeStyles.unorderedList ? activeButtonStyle : buttonStyle}
             onClick={() => handleCommand("insertUnorderedList")}
             title="Bullet List"
           >
@@ -247,21 +292,21 @@ const RichTextEditor = ({ userData, onSave }) => {
 
         <div style={groupStyle}>
           <button
-            style={buttonStyle}
+            style={activeStyles.alignLeft ? activeButtonStyle : buttonStyle}
             onClick={() => handleCommand("justifyLeft")}
             title="Align Left"
           >
             ←
           </button>
           <button
-            style={buttonStyle}
+            style={activeStyles.alignCenter ? activeButtonStyle : buttonStyle}
             onClick={() => handleCommand("justifyCenter")}
             title="Align Center"
           >
             ↔
           </button>
           <button
-            style={buttonStyle}
+            style={activeStyles.alignRight ? activeButtonStyle : buttonStyle}
             onClick={() => handleCommand("justifyRight")}
             title="Align Right"
           >
